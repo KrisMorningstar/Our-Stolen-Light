@@ -15,17 +15,35 @@ public class GuardController : MonoBehaviour
 
     public NavMeshAgent agent;
     public GameObject[] patrolTargets;
+    public GameObject playerTarget;
 
     public bool lapPatrol;
     public bool canSeePlayer;
+    public bool isStunned;
     public int rayLength = 10;
+
+    public float radius;
+    [Range(0, 360)]
+    public float angle;
+
+    public GameObject player;
+    public GameObject heirloom;
+
+    public LayerMask targetMask;
+    public LayerMask obstacleMask;
+
+    private float delay = 0.2f;
+
     // Start is called before the first frame update
     void Start()
     {
         canSeePlayer = false;
+        isStunned = false;
         agent = GetComponent<NavMeshAgent>();
         currentState = patrolState;
-        StartCoroutine(ScanForPlayer());
+
+        player = GameObject.FindGameObjectWithTag("Player");
+        StartCoroutine(LoSCoroutine(delay));
     }
 
     // Update is called once per frame
@@ -33,66 +51,77 @@ public class GuardController : MonoBehaviour
     {
         currentState = currentState.StateTask(this);
         currentStateName = currentState.ToString();
-
     }
 
-    IEnumerator ScanForPlayer()
+    private IEnumerator LoSCoroutine(float _delay)
     {
-        while (!canSeePlayer)
+        WaitForSeconds wait = new WaitForSeconds(_delay);
+
+        while (currentState != stunState)
         {
-            Debug.DrawRay(transform.position, transform.forward * rayLength, Color.red);
-            RaycastHit hit;
-            if (Physics.Raycast(transform.position, transform.forward, out hit, rayLength))
+            yield return wait;
+            LineOfSightChecker();
+        }
+    }
+
+    private void LineOfSightChecker()
+    {
+        Collider[] rangeChecks = Physics.OverlapSphere(transform.position, radius, targetMask);
+
+        if (rangeChecks.Length != 0)
+        {
+            Transform target = rangeChecks[0].transform;
+            Vector3 directionToTarget = (target.position - transform.position).normalized;
+
+            if (Vector3.Angle(transform.forward, directionToTarget) < angle / 2)
             {
-                if (hit.collider.gameObject.layer == 7)
+                float distanceToTarget = Vector3.Distance(transform.position, target.position);
+
+                if (!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, obstacleMask))
                 {
-                    Debug.Log("hit Player");
                     canSeePlayer = true;
                 }
+                else
+                {
+                    canSeePlayer = false;
+                }
             }
-            if (canSeePlayer)
+            else
             {
-                Debug.Log("Chasing!");
-                yield return chaseState;
+                canSeePlayer = false;
             }
-
-            yield return new WaitForSecondsRealtime(0.2f);
         }
-        
+        else if (canSeePlayer)
+        {
+            canSeePlayer = false;
+        }
     }
 }
 public class IdleState : IGuardState
 {
     public IGuardState StateTask(GuardController _guard)
     {
-        //ScanForPlayer(_guard);
-
         if (_guard.canSeePlayer)
         {
             Debug.Log("Chasing!");
             return _guard.chaseState;
         }
+        else if (_guard.isStunned)
+        {
+            Debug.Log("Stunned!");
+            return _guard.stunState;
+        }
+        else if (!_guard.heirloom.active)
+        {
+            Debug.Log("Taken!");
+            return _guard.chaseState;
+        }
         else return _guard.idleState;
     }
-
-    /*private void ScanForPlayer(GuardController _guard)
-    {
-        Debug.DrawRay(_guard.transform.position, _guard.transform.forward * _guard.rayLength, Color.red);
-        RaycastHit hit;
-        if (Physics.Raycast(_guard.transform.position, _guard.transform.forward, out hit, _guard.rayLength))
-        {
-            if (hit.collider.gameObject.layer == 7)
-            {
-                Debug.Log("hit Player");
-                _guard.canSeePlayer = true;
-            }
-        }
-    }*/
 }
 public class PatrolState : IGuardState
 {
     private int patrolPoint = 0;
-    private bool scanning = false;
     private bool reversed = false;
 
     public IGuardState StateTask(GuardController _guard)
@@ -100,11 +129,8 @@ public class PatrolState : IGuardState
         _guard.agent.SetDestination(_guard.patrolTargets[patrolPoint].transform.position);
         if (_guard.agent.remainingDistance < 0.001f)
         {
-            Debug.Log(patrolPoint);
-            Debug.Log("I'm here");
             if ((_guard.patrolTargets.Length-1) == patrolPoint)
             {
-                Debug.Log("oobiiedoobie");
                 switch (_guard.lapPatrol)
                 {
                     case true:
@@ -131,7 +157,22 @@ public class PatrolState : IGuardState
                     break;
             }
         }
-        return _guard.patrolState;
+        if (_guard.canSeePlayer)
+        {
+            Debug.Log("Chasing!");
+            return _guard.chaseState;
+        }
+        else if (_guard.isStunned)
+        {
+            Debug.Log("Stunned!");
+            return _guard.stunState;
+        }
+        else if (!_guard.heirloom.active)
+        {
+            Debug.Log("Taken!");
+            return _guard.chaseState;
+        }
+        else return _guard.patrolState;
     }
 
 
@@ -142,13 +183,22 @@ public class ChaseState : IGuardState
 {
     public IGuardState StateTask(GuardController _guard)
     {
-        return _guard.chaseState;
+        _guard.agent.SetDestination(_guard.player.transform.position);
+
+
+        if (_guard.isStunned)
+        {
+            Debug.Log("Stunned!");
+            return _guard.stunState;
+        }
+        else return _guard.chaseState;
     }
 }
 public class StunState : IGuardState
 {
     public IGuardState StateTask(GuardController _guard)
     {
+        _guard.gameObject.SetActive(false);
         return _guard.stunState;
     }
 }
