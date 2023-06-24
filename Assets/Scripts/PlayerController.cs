@@ -60,8 +60,8 @@ public class PlayerController : MonoBehaviour
 
         rb = GetComponent<Rigidbody>();
         mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
-        //Cursor.lockState = CursorLockMode.Confined;
-        //Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     // Start is called before the first frame update
@@ -83,7 +83,7 @@ public class PlayerController : MonoBehaviour
         }
         if (strike.WasPressedThisFrame())
         {
-            punch.Play("PunchClip");
+            punch.Play("Punch");
             RaycastHit hit;
             if(Physics.Raycast(transform.position, transform.forward, out hit, 2f))
             {
@@ -95,7 +95,7 @@ public class PlayerController : MonoBehaviour
         }
         if (interact.WasPressedThisFrame())
         {
-            punch.Play("PunchClip");
+            punch.Play("Punch");
             RaycastHit hit;
             if(Physics.Raycast(transform.position, transform.forward, out hit, 2f))
             {
@@ -130,13 +130,14 @@ public class PlayerController : MonoBehaviour
             rb.velocity = transform.TransformDirection(localVelocity);
         }
 
-        tValue = turning.ReadValue<Vector2>();
-        rb.rotation = Quaternion.Euler(0, tValue.x/2, 0);
+        tValue = turning.ReadValue<Vector2>().normalized;
 
-        mainCamera.transform.localRotation = Quaternion.Euler(-tValue.y/2, mainCamera.transform.localRotation.y, mainCamera.transform.localRotation.z);
+        rb.transform.Rotate(new Vector3(0, tValue.x *2, 0));
+
+        mainCamera.transform.Rotate(-tValue.y, mainCamera.transform.localRotation.y *2, mainCamera.transform.localRotation.z);
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnCollisionStay(Collision collision)
     {
         if (collision.gameObject.CompareTag("Floor"))
         {
@@ -151,4 +152,6 @@ public class PlayerController : MonoBehaviour
             isGrounded = false;
         }
     }
+
+
 }

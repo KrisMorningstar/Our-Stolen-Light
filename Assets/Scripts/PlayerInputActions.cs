@@ -83,12 +83,12 @@ public partial class @PlayerInputActions : IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": ""Turning"",
-                    ""type"": ""Value"",
+                    ""type"": ""PassThrough"",
                     ""id"": ""95487c1f-fbbc-4d68-888a-42934f02c345"",
                     ""expectedControlType"": ""Vector2"",
                     ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": true
+                    ""interactions"": ""Hold"",
+                    ""initialStateCheck"": false
                 },
                 {
                     ""name"": ""Move"",
@@ -522,7 +522,7 @@ public partial class @PlayerInputActions : IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""62224ba9-15fa-4929-b226-abd4752f2887"",
-                    ""path"": ""<Mouse>/position"",
+                    ""path"": ""<Gamepad>/rightStick"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
@@ -532,8 +532,8 @@ public partial class @PlayerInputActions : IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""d64a1572-d3ee-46da-9311-5f59a239d224"",
-                    ""path"": ""<Gamepad>/rightStick"",
+                    ""id"": ""c8f7765d-0f0a-40a1-9b14-9a43af244afe"",
+                    ""path"": ""<Mouse>/delta"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",

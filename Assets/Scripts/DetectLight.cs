@@ -49,7 +49,7 @@ public class DetectLight : MonoBehaviour
 
             lightColour = lightTexture.GetPixel(textureDimensions / 2, textureDimensions / 2);
             lightLevel = Mathf.Round((lightColour.r + lightColour.g + lightColour.b) / 3 * 10);
-            Debug.Log(lightLevel);
+            //Debug.Log(lightLevel);
 
             yield return new WaitForSeconds(_delay);
         }

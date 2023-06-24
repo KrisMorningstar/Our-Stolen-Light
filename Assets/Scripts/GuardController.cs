@@ -20,6 +20,7 @@ public class GuardController : MonoBehaviour
     public bool lapPatrol;
     public bool canSeePlayer;
     public bool isStunned;
+    public bool checkingStun;
     public int rayLength = 10;
 
     public float radius;
@@ -39,6 +40,7 @@ public class GuardController : MonoBehaviour
     {
         canSeePlayer = false;
         isStunned = false;
+        checkingStun = false;
         agent = GetComponent<NavMeshAgent>();
         currentState = patrolState;
 
@@ -51,6 +53,19 @@ public class GuardController : MonoBehaviour
     {
         currentState = currentState.StateTask(this);
         currentStateName = currentState.ToString();
+        if (isStunned && !checkingStun)
+        {
+            checkingStun = true;
+            StartCoroutine(StunTimer());
+        }
+    }
+
+    private IEnumerator StunTimer()
+    {
+        //WaitForSeconds stunTimer = new WaitForSeconds(3.5f);
+        yield return new WaitForSecondsRealtime(3.5f);
+        isStunned = false;
+        checkingStun=false;
     }
 
     private IEnumerator LoSCoroutine(float _delay)
@@ -79,7 +94,14 @@ public class GuardController : MonoBehaviour
 
                 if (!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, obstacleMask))
                 {
-                    canSeePlayer = true;
+                    if (!player.GetComponent<PlayerController>().isStealthed)
+                    {
+                        canSeePlayer = true;
+                    }
+                    else
+                    {
+                        canSeePlayer = false;
+                    }
                 }
                 else
                 {
@@ -198,8 +220,11 @@ public class StunState : IGuardState
 {
     public IGuardState StateTask(GuardController _guard)
     {
-        _guard.gameObject.SetActive(false);
-        return _guard.stunState;
+        if (!_guard.isStunned)
+        {
+            return _guard.patrolState;
+        }
+        else return _guard.stunState;
     }
 }
 
