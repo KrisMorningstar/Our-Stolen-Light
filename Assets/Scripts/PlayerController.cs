@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using TMPro;
 
 public class PlayerController : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class PlayerController : MonoBehaviour
     public bool isStealthed;
     public Material stealthMaterial;
     public Material normalMaterial;
+    public Material escapeMaterial;
 
     private PlayerInputActions playerInputActions;
     private InputAction movement;
@@ -16,14 +18,17 @@ public class PlayerController : MonoBehaviour
     private InputAction jump;
     private InputAction strike;
     private InputAction interact;
-    private InputAction shoot;
-    private InputAction draw;   
     private InputAction turning;
 
     public GameObject lightDetector;
 
     private GameObject mainCamera;
     public GameObject arms;
+
+    public GameObject winScreen;
+    public GameObject loseScreen;
+    public GameObject escapeSubs;
+    public TMP_Text inputText;
 
     private Vector2 mValue;
     private Vector2 tValue;
@@ -37,6 +42,7 @@ public class PlayerController : MonoBehaviour
     public LayerMask enemyMask;
 
     private bool isGrounded;
+    private bool isEscaping;
 
     private void Awake()
     {
@@ -51,17 +57,13 @@ public class PlayerController : MonoBehaviour
         strike.Enable();
         interact = playerInputActions.Player.Interact;
         interact.Enable();
-        shoot = playerInputActions.Player.Shoot;
-        shoot.Enable();
-        draw = playerInputActions.Player.Draw;
-        draw.Enable();
         turning = playerInputActions.Player.Turning;
         turning.Enable();
 
         rb = GetComponent<Rigidbody>();
         mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        //Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.visible = false;
     }
 
     // Start is called before the first frame update
@@ -71,6 +73,8 @@ public class PlayerController : MonoBehaviour
         isStealthed = false;
     }
 
+    
+
     // Update is called once per frame
     void Update()
     {
@@ -79,10 +83,12 @@ public class PlayerController : MonoBehaviour
             if (isGrounded)
             {
                 rb.AddForce(Vector3.up * jumpForce);
+                inputText.text = jump.ToString();
             }
         }
         if (strike.WasPressedThisFrame())
         {
+            inputText.text = strike.ToString();
             punch.Play("Punch");
             RaycastHit hit;
             if(Physics.Raycast(transform.position, transform.forward, out hit, 2f))
@@ -95,6 +101,7 @@ public class PlayerController : MonoBehaviour
         }
         if (interact.WasPressedThisFrame())
         {
+            inputText.text = interact.ToString();
             punch.Play("Punch");
             RaycastHit hit;
             if(Physics.Raycast(transform.position, transform.forward, out hit, 2f))
@@ -105,11 +112,16 @@ public class PlayerController : MonoBehaviour
                     Debug.Log("hit it?");
                     //hit.collider.gameObject.GetComponent<GuardController>().isTaken = true;   
                     hit.collider.gameObject.SetActive(false);
+                    isEscaping = true;
+                    escapeSubs.SetActive(true);
                 }
             }
         }
-
-        if(!isStealthed && (lightDetector.GetComponent<DetectLight>().lightLevel <= 2))
+        if (isEscaping)
+        {
+            arms.GetComponent<Renderer>().material.Lerp(arms.GetComponent<Renderer>().material, escapeMaterial, 10);
+        }
+        else if(!isStealthed && (lightDetector.GetComponent<DetectLight>().lightLevel <= 2))
         {
             isStealthed = true;
             arms.GetComponent<Renderer>().material.Lerp(arms.GetComponent<Renderer>().material, stealthMaterial,10);
@@ -135,6 +147,25 @@ public class PlayerController : MonoBehaviour
         rb.transform.Rotate(new Vector3(0, tValue.x *2, 0));
 
         mainCamera.transform.Rotate(-tValue.y, mainCamera.transform.localRotation.y *2, mainCamera.transform.localRotation.z);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if(collision.collider.gameObject.layer == 9)
+        {
+            Debug.Log("Dead");
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            loseScreen.SetActive(true);
+        }
+        if((collision.collider.gameObject.tag == "Gate") && (isEscaping))
+        {
+            Debug.Log("Win");
+
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            winScreen.SetActive(true);
+        }
     }
 
     private void OnCollisionStay(Collision collision)

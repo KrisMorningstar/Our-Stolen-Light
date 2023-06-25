@@ -16,12 +16,17 @@ public class GuardController : MonoBehaviour
     public NavMeshAgent agent;
     public GameObject[] patrolTargets;
     public GameObject playerTarget;
+    public GameObject animObject;
 
     public bool lapPatrol;
     public bool canSeePlayer;
     public bool isStunned;
     public bool checkingStun;
     public int rayLength = 10;
+    public bool idleWaiting;
+    public bool idleStarted;
+
+    private Animation spin;
 
     public float radius;
     [Range(0, 360)]
@@ -41,8 +46,14 @@ public class GuardController : MonoBehaviour
         canSeePlayer = false;
         isStunned = false;
         checkingStun = false;
+        idleWaiting = false;
+        idleStarted = false;
         agent = GetComponent<NavMeshAgent>();
         currentState = patrolState;
+
+        spin = animObject.GetComponent<Animation>();
+
+        spin.Play("Spin");
 
         player = GameObject.FindGameObjectWithTag("Player");
         StartCoroutine(LoSCoroutine(delay));
@@ -55,14 +66,20 @@ public class GuardController : MonoBehaviour
         currentStateName = currentState.ToString();
         if (isStunned && !checkingStun)
         {
+            agent.SetDestination(agent.transform.position);
+            currentState = stunState;
             checkingStun = true;
             StartCoroutine(StunTimer());
         }
+        /*if (isStunned)
+        {
+            agent.SetDestination(agent.transform.position);
+        }*/
+
     }
 
     private IEnumerator StunTimer()
     {
-        //WaitForSeconds stunTimer = new WaitForSeconds(3.5f);
         yield return new WaitForSecondsRealtime(3.5f);
         isStunned = false;
         checkingStun=false;
@@ -77,6 +94,21 @@ public class GuardController : MonoBehaviour
             yield return wait;
             LineOfSightChecker();
         }
+    }
+
+    public void IdleForcer()
+    {
+        Debug.Log("forced");
+        StartCoroutine(IdleTimer());
+    }
+
+    private IEnumerator IdleTimer()
+    {
+        Debug.Log("Starting Timer");
+        yield return new WaitForSecondsRealtime(10f);
+        Debug.Log("I have now looked");
+        idleWaiting = false;
+        Debug.Log("wait false");
     }
 
     private void LineOfSightChecker()
@@ -94,13 +126,10 @@ public class GuardController : MonoBehaviour
 
                 if (!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, obstacleMask))
                 {
+                    //canSeePlayer = true;
                     if (!player.GetComponent<PlayerController>().isStealthed)
                     {
                         canSeePlayer = true;
-                    }
-                    else
-                    {
-                        canSeePlayer = false;
                     }
                 }
                 else
@@ -123,22 +152,47 @@ public class IdleState : IGuardState
 {
     public IGuardState StateTask(GuardController _guard)
     {
+        if (_guard.idleWaiting)
+        {
+            if (!_guard.idleStarted)
+            {
+                _guard.idleStarted = true;
+
+                Debug.Log("idling");
+                _guard.IdleForcer();
+                //return _guard.idleState;
+            }
+            else
+            {
+                return _guard.idleState;
+            }
+        }
+        else if (!_guard.idleWaiting)
+        {
+            _guard.idleStarted = false;
+            return _guard.patrolState;
+        }
+
         if (_guard.canSeePlayer)
         {
             Debug.Log("Chasing!");
             return _guard.chaseState;
         }
-        else if (_guard.isStunned)
+        /*else if (_guard.isStunned)
         {
             Debug.Log("Stunned!");
             return _guard.stunState;
-        }
+        }*/
         else if (!_guard.heirloom.active)
         {
             Debug.Log("Taken!");
             return _guard.chaseState;
         }
-        else return _guard.idleState;
+        else
+        {
+            Debug.Log("fail");
+            return _guard.idleState;
+        }
     }
 }
 public class PatrolState : IGuardState
@@ -148,45 +202,58 @@ public class PatrolState : IGuardState
 
     public IGuardState StateTask(GuardController _guard)
     {
-        _guard.agent.SetDestination(_guard.patrolTargets[patrolPoint].transform.position);
-        if (_guard.agent.remainingDistance < 0.001f)
-        {
-            if ((_guard.patrolTargets.Length-1) == patrolPoint)
-            {
-                switch (_guard.lapPatrol)
-                {
-                    case true:
-                        patrolPoint = 0;
-                        break;
-                    case false:
-                        reversed = true;
-                        patrolPoint--;
-                        break;
-                }
-                return _guard.patrolState;
-            }
-            else if(patrolPoint == 0)
-            {
-                reversed = false;
-            }
-            switch (reversed)
-            {
-                case true:
-                    patrolPoint--;
-                    break;
-                case false:
-                    patrolPoint++;
-                    break;
-            }
-        }
         if (_guard.canSeePlayer)
         {
             Debug.Log("Chasing!");
             return _guard.chaseState;
         }
-        else if (_guard.isStunned)
+        Debug.Log("patrolling");
+        if (_guard.isStunned)
         {
             Debug.Log("Stunned!");
+            return _guard.stunState;
+        }
+        else
+        {
+            _guard.agent.SetDestination(_guard.patrolTargets[patrolPoint].transform.position);
+            if (_guard.agent.remainingDistance < 0.001f)
+            {
+                if ((_guard.patrolTargets.Length - 1) == patrolPoint)
+                {
+                    switch (_guard.lapPatrol)
+                    {
+                        case true:
+                            patrolPoint = 0;
+                            break;
+                        case false:
+                            reversed = true;
+                            patrolPoint--;
+                            break;
+                    }
+                    return _guard.patrolState;
+                }
+                else if (patrolPoint == 0)
+                {
+                    reversed = false;
+                }
+                switch (reversed)
+                {
+                    case true:
+                        patrolPoint--;
+                        break;
+                        
+                    case false:
+                        patrolPoint++;
+                        break;
+                }
+                _guard.idleWaiting = true;
+                return _guard.idleState;
+            }
+        }
+        if (_guard.isStunned)
+        {
+            Debug.Log("Stunned!");
+            _guard.agent.SetDestination(_guard.transform.position);
             return _guard.stunState;
         }
         else if (!_guard.heirloom.active)
@@ -208,12 +275,13 @@ public class ChaseState : IGuardState
         _guard.agent.SetDestination(_guard.player.transform.position);
 
 
-        if (_guard.isStunned)
+        /*if (_guard.isStunned)
         {
             Debug.Log("Stunned!");
             return _guard.stunState;
         }
-        else return _guard.chaseState;
+        else */
+        return _guard.chaseState;
     }
 }
 public class StunState : IGuardState

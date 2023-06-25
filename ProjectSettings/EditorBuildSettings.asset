@@ -4,6 +4,9 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/TafeScene.unity
+    guid: 06e6a4909d0495e4997d62600ca382f4
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 8faab5b424b9feb40be73aeadd99d5f7, type: 2}

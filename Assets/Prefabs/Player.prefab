@@ -116,7 +116,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isStealthed: 0
   stealthMaterial: {fileID: 2100000, guid: 8d2b879a05ca6b84da53137c21751904, type: 2}
-  normalMaterial: {fileID: 2100000, guid: 8423c9bafdca0904484e99d872f6119a, type: 2}
+  normalMaterial: {fileID: 2100000, guid: 5a7085aa9882f4f47a4817cdcb565698, type: 2}
   lightDetector: {fileID: 122226524613949434}
   arms: {fileID: 3728670216636868838}
   jumpForce: 200

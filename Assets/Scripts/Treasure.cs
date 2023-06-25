@@ -4,11 +4,14 @@ using UnityEngine;
 
 public class Treasure : MonoBehaviour
 {
-    public bool isTaken;
-    // Start is called before the first frame update
-    void Start()
+    public GameObject idol;
+    public GameObject[] spawns;
+
+
+    private void Start()
     {
-        isTaken = false;
+        int spawnIndex = Random.Range(0, spawns.Length - 1);
+        idol.transform.SetPositionAndRotation(spawns[spawnIndex].transform.position, spawns[spawnIndex].transform.rotation);
     }
 
     // Update is called once per frame
